@@ -11,8 +11,10 @@ ZHEvents::ZHEvents():
 	m_nEvt(0),
 	m_nRunSum(0),
 	m_nEvtSum(0),
-	n_ZHDecays(0),
-	n_ZDecays(0)
+	m_leptonicDecayMode(0),
+	m_bosonDecayMode(0),
+	n_ZHDecays(0.0),
+	n_ZDecays(0.0)
 {
 	_description = "ZHEvents checks the decay modes of Z/H bosons and accepts/rejects events wrt the decay mode and number of idolated leptons and jets";
 
@@ -21,13 +23,6 @@ ZHEvents::ZHEvents():
 					"Name of the MCParticle collection"  ,
 					m_mcParticleCollection,
 					std::string("MCParticle")
-				);
-
-	registerInputCollection(	LCIO::RECONSTRUCTEDPARTICLE,
-					"PfoCollection",
-					"Name of input pfo collection",
-					m_inputPfoCollection,
-					std::string("PandoraPFOs")
 				);
 
 	registerInputCollection(	LCIO::RECONSTRUCTEDPARTICLE,
@@ -206,25 +201,25 @@ void ZHEvents::init()
 		m_pTFile = new TFile(m_rootFile.c_str(), "recreate");
 		m_pTTree = new TTree("SLDCorrection", "SLDCorrection");
 		m_pTTree->SetDirectory(m_pTFile);
-		h_ZHDecayMode = new TH1I( "ZHDecayMode" , "; Decay Mode" , 17 , -0.5 , 16.5 ); n_ZHDecays = 0;
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(1,"HH");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(2,"ZZ");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(3,"W^{+}W^{-}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(4,"b#bar{b}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(5,"c#bar{c}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(6,"s#bar{s}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(7,"u#bar{u}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(8,"d#bar{d}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(9,"gg");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(10,"e^{+}e^{-}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(11,"#mu^{+}#mu^{-}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(12,"#tau^{+}#tau^{-}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(13,"#nu_{e}#bar{#nu}_{e}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(14,"#nu_{#mu}#bar{#nu}_{#mu}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(15,"#nu_{#tau}#bar{#nu}_{#tau}");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(16,"#gamma#gamma");
-		h_ZHDecayMode->GetXaxis()->SetBinLabel(17,"other");
-		h_ZLeptonicDecayMode = new TH1I( "h_ZLeptonicDecayMode" , "; Decay Mode" , 3 , -0.5 , 2.5 ); n_ZDecays = 0;
+		m_pTTree->Branch("leptonicDecayMode", &m_leptonicDecayMode , "leptonicDecayMode/I" );
+		m_pTTree->Branch("bosonDecayMode", &m_bosonDecayMode , "bosonDecayMode/I" );
+		h_ZHDecayMode = new TH1F( "ZHDecayMode" , "; Decay Mode" , 15 , -0.5 , 14.5 ); n_ZHDecays = 0.0;
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(1,"other");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(2,"W^{+}W^{-}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(3,"b#bar{b}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(4,"c#bar{c}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(5,"s#bar{s}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(6,"u#bar{u}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(7,"d#bar{d}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(8,"gg");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(9,"e^{+}e^{-}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(10,"#mu^{+}#mu^{-}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(11,"#tau^{+}#tau^{-}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(12,"#nu_{e}#bar{#nu}_{e}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(13,"#nu_{#mu}#bar{#nu}_{#mu}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(14,"#nu_{#tau}#bar{#nu}_{#tau}");
+		h_ZHDecayMode->GetXaxis()->SetBinLabel(15,"#gamma#gamma");
+		h_ZLeptonicDecayMode = new TH1F( "ZLeptonicDecayMode" , "; Decay Mode" , 3 , 0.5 , 3.5 ); n_ZDecays = 0.0;
 		h_ZLeptonicDecayMode->GetXaxis()->SetBinLabel(1,"Z#rightarrow e^{+}e^{-}");
 		h_ZLeptonicDecayMode->GetXaxis()->SetBinLabel(2,"Z#rightarrow #mu^{+}#mu^{-}");
 		h_ZLeptonicDecayMode->GetXaxis()->SetBinLabel(3,"Z#rightarrow #tau^{+}#tau^{-}");
@@ -234,7 +229,8 @@ void ZHEvents::init()
 
 void ZHEvents::Clear()
 {
-
+	m_leptonicDecayMode = 0;
+	m_bosonDecayMode = 0;
 }
 
 void ZHEvents::processRunHeader()
@@ -258,6 +254,7 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 	bool trueNJets = false;
 	bool trueNIsoLeps = false;
 	bool askedDecayMode = false;
+	bool askedLeptonicDecayMode = false;
 	const EVENT::LCCollection *MCParticleCollection{};
 	const EVENT::LCCollection *JetCollection{};
 	const EVENT::LCCollection *IsoleptonCollection{};
@@ -279,6 +276,7 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 			trueNJets = true;
 			streamlog_out( DEBUG3 ) << "	Number of jets in the event matches the asked number of jets, --------EVENT ACCEPTED--------" << std::endl;
 		}
+		setReturnValue( "trueNJets" , trueNJets );
 
 		int nIsoLeps = IsoleptonCollection->getNumberOfElements();
 		streamlog_out( DEBUG4 ) << "	" << nIsoLeps << " issolated leptons in event, looking for " << m_nIsoLeps << " isolated leptons" << std::endl;
@@ -292,44 +290,113 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 			trueNIsoLeps = true;
 			streamlog_out( DEBUG3 ) << "	Number of isolated leptons in the event matches the asked number of isolated leptons, --------EVENT ACCEPTED--------" << std::endl;
 		}
+		setReturnValue( "trueNIsoLeps" , trueNIsoLeps );
+
+		int leptonicDecayMode = 0;
+		int bosonDecayMode = 0;
 		if ( m_cheatDecayMode )
 		{
-			int leptonicDecayMode = 0;
-			int bosonDecayMode = 0;
+			const EVENT::MCParticle *leptonicZ = NULL;
+			mcpVector leptonicDecayProducts{};
+			mcpVector otherDecayProducts{};
 			const EVENT::MCParticle *firstElectron = dynamic_cast<EVENT::MCParticle*>( MCParticleCollection->getElementAt( 4 ) );
-			for ( int i_d = 0 ; i_d < firstElectron->getDaughters().size() ; ++i_d )
+			leptonicDecayMode = findDecayLeptonicMode( firstElectron , leptonicDecayProducts );
+			if ( leptonicDecayMode <= 0 )
 			{
-				EVENT::MCParticle *daughter = firstElectron->getDaughters()[ i_d ];
-				if ( abs( daughter->getPDG() ) == 23 || abs( daughter->getPDG() ) == 25 )
+				for ( unsigned int i_d = 0 ; i_d < firstElectron->getDaughters().size() ; ++i_d )
 				{
-					leptonicDecayMode = findDecayLeptonicMode( daughter );
+					const EVENT::MCParticle *daughter = firstElectron->getDaughters()[ i_d ];
+					if ( abs( daughter->getPDG() ) == 23 )
+					{
+						leptonicDecayMode = findDecayLeptonicMode( daughter , leptonicDecayProducts );
+						if ( leptonicDecayMode > 0 ) leptonicZ = daughter;
+					}
+				}
+				leptonicDecayProducts.clear();
+			}
+			if ( leptonicZ != NULL ) leptonicDecayMode = findDecayLeptonicMode( leptonicZ , leptonicDecayProducts );
+			if ( m_includZe1e1 && leptonicDecayMode == 1 ) askedLeptonicDecayMode = true;
+			else if ( m_includZe2e2 && leptonicDecayMode == 2 ) askedLeptonicDecayMode = true;
+			else if ( m_includZe3e3 && leptonicDecayMode == 3 ) askedLeptonicDecayMode = true;
+			else  askedLeptonicDecayMode = false;
+			setReturnValue( "leptonicDecayMode" , askedLeptonicDecayMode );
+
+			bosonDecayMode = findDecayMode( firstElectron , otherDecayProducts , leptonicDecayProducts );
+			if ( bosonDecayMode <= 0 )
+			{
+				for ( unsigned int i_d = 0 ; i_d < firstElectron->getDaughters().size() ; ++i_d )
+				{
+					const EVENT::MCParticle *daughter = firstElectron->getDaughters()[ i_d ];
+					if ( ( abs( daughter->getPDG() ) == 23 || abs( daughter->getPDG() ) == 25 ) && daughter != leptonicZ )
+					{
+						bosonDecayMode = findDecayMode( daughter , otherDecayProducts , leptonicDecayProducts );
+					}
 				}
 			}
+			if ( bosonDecayMode > 0 )
+			{
+				if ( m_includ_other && bosonDecayMode == 0 ) askedDecayMode = true;
+				else if ( m_includ_WW && bosonDecayMode == 1 ) askedDecayMode = true;
+				else if ( m_includ_bb && bosonDecayMode == 2 ) askedDecayMode = true;
+				else if ( m_includ_cc && bosonDecayMode == 3 ) askedDecayMode = true;
+				else if ( m_includ_ss && bosonDecayMode == 4 ) askedDecayMode = true;
+				else if ( m_includ_uu && bosonDecayMode == 5 ) askedDecayMode = true;
+				else if ( m_includ_dd && bosonDecayMode == 6 ) askedDecayMode = true;
+				else if ( m_includ_gg && bosonDecayMode == 7 ) askedDecayMode = true;
+				else if ( m_includ_ee && bosonDecayMode == 8 ) askedDecayMode = true;
+				else if ( m_includ_mumu && bosonDecayMode == 9 ) askedDecayMode = true;
+				else if ( m_includ_tautau && bosonDecayMode == 10 ) askedDecayMode = true;
+				else if ( m_includ_nu1nu1 && bosonDecayMode == 11 ) askedDecayMode = true;
+				else if ( m_includ_nu2nu2 && bosonDecayMode == 12 ) askedDecayMode = true;
+				else if ( m_includ_nu3nu3 && bosonDecayMode == 13 ) askedDecayMode = true;
+				else if ( m_includ_gammagamma && bosonDecayMode == 14 ) askedDecayMode = true;
+				else  askedDecayMode = false;
+				setReturnValue( "ZHDecayMode" , askedDecayMode );
+			}
+			else
+			{
+				setReturnValue( "ZHDecayMode" , false );
+			}
 		}
+		if ( m_fillRootTree )
+		{
+			h_ZHDecayMode->Fill( bosonDecayMode );
+			n_ZHDecays += 1.0;
+			h_ZLeptonicDecayMode->Fill( leptonicDecayMode );
+			n_ZDecays += 1.0;
+		}
+		m_leptonicDecayMode = leptonicDecayMode;
+		m_bosonDecayMode = bosonDecayMode;
 	}
 	catch( DataNotAvailableException &e )
         {
         	streamlog_out(MESSAGE) << "	Input collection not found in event " << m_nEvt << std::endl;
         }
+	m_pTTree->Fill();
 
 }
 
-int ZHEvents::findDecayLeptonicMode( MCParticle *boson )
+int ZHEvents::findDecayLeptonicMode( const EVENT::MCParticle *motherParticle , mcpVector &leptonicDecayProducts )
 {
 	int decayMode = -1;
-	for ( int i_d1 = 0 ; i_d1 < boson->getDaughters().size() ; ++i_d1 )
+	for ( unsigned int i_d1 = 0 ; i_d1 < motherParticle->getDaughters().size() ; ++i_d1 )
 	{
-		EVENT::MCParticle *firstDaughter = boson->getDaughters()[ i_d1 ];
+		EVENT::MCParticle *firstDaughter = motherParticle->getDaughters()[ i_d1 ];
 		for ( unsigned int i_type = 0 ; i_type < ( sizeof( leptonicPDGCodes ) / sizeof( *leptonicPDGCodes ) ) ; ++ i_type )
 		{
 			if ( firstDaughter->getPDG() == leptonicPDGCodes[ i_type ] )
 			{
-				for ( int i_d2 = 0 ; i_d2 < boson->getDaughters().size() ; ++i_d2 )
+				for ( unsigned int i_d2 = 0 ; i_d2 < motherParticle->getDaughters().size() ; ++i_d2 )
 				{
 					if ( i_d1 != i_d2 )
 					{
-						EVENT::MCParticle *secondDaughter = boson->getDaughters()[ i_d2 ];
-						if ( firstDaughter->getPDG() == -1 * secondDaughter->getPDG() ) decayMode = i_type;
+						EVENT::MCParticle *secondDaughter = motherParticle->getDaughters()[ i_d2 ];
+						if ( firstDaughter->getPDG() == -1 * secondDaughter->getPDG() )
+						{
+							leptonicDecayProducts.push_back( firstDaughter );
+							leptonicDecayProducts.push_back( secondDaughter );
+							decayMode = i_type + 1 ;
+						}
 					}
 				}
 			}
@@ -338,164 +405,65 @@ int ZHEvents::findDecayLeptonicMode( MCParticle *boson )
 	return decayMode;
 }
 
-int ZHEvents::findDecayMode( MCParticle *boson )
+int ZHEvents::findDecayMode( const EVENT::MCParticle *motherParticle , mcpVector &otherDecayProducts , mcpVector leptonicDecayProducts )
 {
-	for ( int i_d1 = 0 ; i_d1 < boson->getDaughters().size() ; ++i_d1 )
+	int decayMode = 0;
+	for ( unsigned int i_d1 = 0 ; i_d1 < motherParticle->getDaughters().size() ; ++i_d1 )
 	{
-		EVENT::MCParticle *firstDaughter = boson->getDaughters()[ i_d1 ];
-		for ( unsigned int i_type = 0 ; i_type < ( sizeof( PDGCodes ) / sizeof( *PDGCodes ) ) ; ++ i_type )
+		EVENT::MCParticle *firstDaughter = motherParticle->getDaughters()[ i_d1 ];
+		bool isFirstDaughterInLeptonicMode = false;
+		for ( unsigned int i_lep = 0 ; i_lep < leptonicDecayProducts.size() ; ++i_lep )
 		{
-			if ( firstDaughter->getPDG() == PDGCodes[ i_type ] )
-			{
-				for ( int i_d2 = 0 ; i_d2 < boson->getDaughters().size() ; ++i_d2 )
-				{
-					if ( i_d1 != i_d2 )
-					{
-						EVENT::MCParticle *secondDaughter = boson->getDaughters()[ i_d2 ];
-						if ( firstDaughter->getPDG() <= 16 && firstDaughter->getPDG() == -1 * secondDaughter->getPDG() )
-						{
-							return firstDaughter->getPDG();
-						}
-//						else if ( firstDaughter->getPDG() > 16 && firstDaughter->getPDG() == secondDaughter->getPDG() )
-					}
-				}
-			}
+			if ( firstDaughter == leptonicDecayProducts[ i_lep ] ) isFirstDaughterInLeptonicMode = true;
 		}
-	}
-}
-
-
-
-
-
-
-
-
-int ZHEvents::isZHDecayedTo( const EVENT::LCCollection *MCParticleCollection , int parentPDG , int daughtersPDG , int &daughter1index , int &daughter2index )
-{
-	int elementFrom = 8;
-	int elementTo = 20;
-	int isDecaydToDaughter = 0;
-	int d1PDG = abs( daughtersPDG );
-	int d2PDG = ( abs( daughtersPDG ) < 20 ? -1 * d1PDG : d1PDG );
-	for ( int i_d1 = elementFrom ; i_d1 < elementTo ; ++i_d1 )
-	{
-		const EVENT::MCParticle *daughter1 = dynamic_cast<EVENT::MCParticle*>( MCParticleCollection->getElementAt( i_d1 ) );
-		if ( daughter1->getPDG() == d1PDG )
+		if ( !isFirstDaughterInLeptonicMode )
 		{
-			for ( unsigned int i_parent = 0 ; i_parent < daughter1->getParents().size() ; ++i_parent )
+			for ( unsigned int i_type = 0 ; i_type < ( sizeof( PDGCodes ) / sizeof( *PDGCodes ) ) ; ++ i_type )
 			{
-				const EVENT::MCParticle *parent = daughter1->getParents()[ i_parent ];
-				if ( parent->getPDG() == parentPDG )
+				if ( firstDaughter->getPDG() == PDGCodes[ i_type ] )
 				{
-					for ( unsigned int i_d2 = 0 ; i_d2 < parent->getDaughters().size() ; ++i_d2 )
+					for ( unsigned int i_d2 = 0 ; i_d2 < motherParticle->getDaughters().size() ; ++i_d2 )
 					{
-						const EVENT::MCParticle *daughter2 = parent->getDaughters()[ i_d2 ];
-						if ( daughter2 != daughter1 && daughter2->getPDG() == d2PDG )
+						if ( i_d1 != i_d2 )
 						{
-							isDecaydToDaughter = 1;
-							daughter1index = i_d1;
-							for ( int i_d = elementFrom ; i_d < elementTo ; ++i_d )
+							EVENT::MCParticle *secondDaughter = motherParticle->getDaughters()[ i_d2 ];
+							bool isSecondDaughterInLeptonicMode = false;
+							for ( unsigned int i_lep = 0 ; i_lep < leptonicDecayProducts.size() ; ++i_lep )
 							{
-								const EVENT::MCParticle *testMCP = dynamic_cast<EVENT::MCParticle*>( MCParticleCollection->getElementAt( i_d ) );
-								if ( testMCP == daughter2 ) daughter2index = i_d;
+								if ( secondDaughter == leptonicDecayProducts[ i_lep ] ) isSecondDaughterInLeptonicMode = true;
 							}
-							return isDecaydToDaughter;
-						}
-					}
-				}
-
-
-				else if ( parent->getPDG() != 25 )
-				{
-					for ( unsigned int i_d2 = 0 ; i_d2 < parent->getDaughters().size() ; ++i_d2 )
-					{
-						const EVENT::MCParticle *daughter2 = parent->getDaughters()[ i_d2 ];
-						if ( daughter2 != daughter1 && daughter2->getPDG() == d2PDG ) isDecaydToDaughter = 1;
-					}
-				}
-			}
-		}
-	}
-	return isDecaydToDaughter;
-}
-
-int ZHEvents::isZDecayedTo( const EVENT::LCCollection *MCParticleCollection , int parentPDG , int daughtersPDG , int daughter1index , int daughter2index )
-{
-	int elementFrom = 8;
-	int elementTo = 20;
-	int isDecaydToDaughter = 0;
-	int d1PDG = abs( daughtersPDG );
-	int d2PDG = ( abs( daughtersPDG ) < 20 ? -1 * d1PDG : d1PDG );
-	for ( int i_d1 = elementFrom ; i_d1 < elementTo ; ++i_d1 )
-	{
-		const EVENT::MCParticle *daughter1 = dynamic_cast<EVENT::MCParticle*>( MCParticleCollection->getElementAt( i_d1 ) );
-		if ( daughter1->getPDG() == d1PDG && i_d1 != daughter1index && i_d1 != daughter2index )
-		{
-			if ( daughter1->getParents().size() == 2 && abs( ( daughter1->getParents()[ 0 ] )->getPDG() ) == 11 && ( daughter1->getParents()[ 0 ] )->getPDG() == -1 * ( daughter1->getParents()[ 1 ] )->getPDG() )
-			{
-				const EVENT::MCParticle *parent = daughter1->getParents()[ 0 ];
-				for ( unsigned int i_d2 = 0 ; i_d2 < parent->getDaughters().size() ; ++i_d2 )
-				{
-					const EVENT::MCParticle *daughter2 = parent->getDaughters()[ i_d2 ];
-					if ( daughter2 != daughter1 && daughter2->getPDG() == d2PDG )
-					{
-						isDecaydToDaughter = 1;
-						return isDecaydToDaughter;
-					}
-				}
-			}
-			else if ( daughter1->getParents().size() == 1 )
-			{
-				const EVENT::MCParticle *parent = daughter1->getParents()[ 0 ];
-				if ( parent->getPDG() == parentPDG )
-				{
-					for ( unsigned int i_d2 = 0 ; i_d2 < parent->getDaughters().size() ; ++i_d2 )
-					{
-						const EVENT::MCParticle *daughter2 = parent->getDaughters()[ i_d2 ];
-						if ( daughter2 != daughter1 && daughter2->getPDG() == d2PDG )
-						{
-							isDecaydToDaughter = 1;
-							return isDecaydToDaughter;
+							if ( !isSecondDaughterInLeptonicMode )
+							{
+								if ( abs( firstDaughter->getPDG() ) == 24 && firstDaughter->getPDG() == -1 * secondDaughter->getPDG() )
+								{
+									decayMode = i_type + 1 ;
+									otherDecayProducts.push_back( firstDaughter );
+									otherDecayProducts.push_back( secondDaughter );
+								}
+								else if ( firstDaughter->getPDG() <= 16 && firstDaughter->getPDG() == -1 * secondDaughter->getPDG() )
+								{
+									decayMode = i_type + 1 ;
+									otherDecayProducts.push_back( firstDaughter );
+									otherDecayProducts.push_back( secondDaughter );
+								}
+								else if ( firstDaughter->getPDG() > 16 && firstDaughter->getPDG() == secondDaughter->getPDG() )
+								{
+									decayMode = i_type + 1 ;
+									otherDecayProducts.push_back( firstDaughter );
+									otherDecayProducts.push_back( secondDaughter );
+								}
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	return isDecaydToDaughter;
+	return decayMode;
 }
 
-void ZHEvents::check( EVENT::LCEvent *pLCEvent )
+void ZHEvents::check()
 {
-/*
-	const EVENT::LCCollection *inJetCollection{};
-	const EVENT::LCCollection *inIsoleptonCollection{};
-	const EVENT::LCCollection *outPFOCollection{};
-	const EVENT::LCCollection *outIsoleptonCollection{};
-	try
-	{
-		inJetCollection = pLCEvent->getCollection( m_inputJetCollection );
-		inIsoleptonCollection = pLCEvent->getCollection( m_inputIsoLepCollection );
-		outPFOCollection = pLCEvent->getCollection( m_outputPfoCollection );
-		outIsoleptonCollection = pLCEvent->getCollection( m_outputIsolepCollection );
-		int nJets = inJetCollection->getNumberOfElements();
-		int nInPFOs = 0;
-		for ( int i_jet = 0 ; i_jet < nJets ; ++i_jet )
-		{
-			ReconstructedParticle* jet = dynamic_cast<ReconstructedParticle*>( inJetCollection->getElementAt( i_jet ) );
-			nInPFOs += jet->getParticles().size();
-		}
-		int nInIsoLep = inIsoleptonCollection->getNumberOfElements();
-		int nOutPFOs = outPFOCollection->getNumberOfElements();
-		int nOutIsoLep = outIsoleptonCollection->getNumberOfElements();
-		streamlog_out( DEBUG4 ) << "	" << nJets << " jets with " << nInPFOs << " PFOs and " << nInIsoLep << " Isolated Leptons converted to " << nOutPFOs << " PFOs and " << nOutIsoLep << " Isolated Leptons" << std::endl;
-	}
-	catch( DataNotAvailableException &e )
-        {
-          streamlog_out( WARNING ) << "	Input/Output collections not found in event: " << m_nEvt << std::endl;
-        }
-*/
 }
 
 void ZHEvents::end()

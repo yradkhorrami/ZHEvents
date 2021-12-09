@@ -37,15 +37,14 @@ public:
 	virtual ~ZHEvents() = default;
 	ZHEvents( const ZHEvents& ) = delete;
 	ZHEvents &operator = ( const ZHEvents& ) = delete;
+	typedef std::vector<EVENT::MCParticle*> mcpVector;
 	virtual void init();
 	virtual void Clear();
 	virtual void processRunHeader();
 	virtual void processEvent( EVENT::LCEvent *pLCEvent );
-	int findDecayLeptonicMode( MCParticle *boson );
-	int findDecayMode( MCParticle *boson );
-	int isZHDecayedTo( const EVENT::LCCollection *MCParticleCollection , int parentPDG , int daughtersPDG , int &daughter1index , int &daughter2index );
-	int isZDecayedTo( const EVENT::LCCollection *MCParticleCollection , int parentPDG , int daughtersPDG , int daughter1index , int daughter2index );
- 	virtual void check( EVENT::LCEvent *pLCEvent );
+	int findDecayLeptonicMode( const EVENT::MCParticle *motherParticle , mcpVector &leptonicDecayProducts );
+	int findDecayMode( const EVENT::MCParticle *motherParticle , mcpVector &otherDecayProducts , mcpVector leptonicDecayProducts );
+ 	virtual void check();
 	virtual void end();
 private:
 
@@ -54,7 +53,6 @@ private:
 	typedef std::vector<float>		FloatVector;
 
 	std::string				m_mcParticleCollection{};
-	std::string				m_inputPfoCollection{};
 	std::string				m_inputJetCollection{};
 	std::string				m_inputIsoLepCollection{};
 	std::string				m_rootFile{};
@@ -88,14 +86,16 @@ private:
 	bool					m_includZe3e3 = true;
 	int					m_nJets = 0;
 	int					m_nIsoLeps = 0;
+	int					m_leptonicDecayMode;
+	int					m_bosonDecayMode;
 
-	double					PDGCodes[ 16 ]{ 25 , 23 , 24 , 5 , 4 , 3 , 2 , 1 , 21 , 11 , 13 , 15 , 12 , 14 , 16 , 22 };
+	double					PDGCodes[ 14 ]{ 24 , 5 , 4 , 3 , 2 , 1 , 21 , 11 , 13 , 15 , 12 , 14 , 16 , 22 };
 	double					leptonicPDGCodes[ 3 ]{ 11 , 13 , 15 };
 	TFile					*m_pTFile{};
 	TTree					*m_pTTree{};
-	TH1I					*h_ZHDecayMode{};
-	int					n_ZHDecays = 0;
-	TH1I					*h_ZLeptonicDecayMode{};
-	int					n_ZDecays = 0;
+	TH1F					*h_ZHDecayMode{};
+	float					n_ZHDecays = 0.0;
+	TH1F					*h_ZLeptonicDecayMode{};
+	float					n_ZDecays = 0.0;
 };
 #endif
