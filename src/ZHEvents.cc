@@ -261,8 +261,11 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 	try
 	{
 		MCParticleCollection = pLCEvent->getCollection( m_mcParticleCollection );
+		streamlog_out( DEBUG4 ) << "	MCParticle Collection: " << MCParticleCollection << std::endl;
 		JetCollection = pLCEvent->getCollection( m_inputJetCollection );
+		streamlog_out( DEBUG4 ) << "	Jet Collection: " << JetCollection << std::endl;
 		IsoleptonCollection = pLCEvent->getCollection( m_inputIsoLepCollection );
+		streamlog_out( DEBUG4 ) << "	Isolated Lepton Collection: " << IsoleptonCollection << std::endl;
 
 		int nJets = JetCollection->getNumberOfElements();
 		streamlog_out( DEBUG4 ) << "	" << nJets << " jets in event, looking for " << m_nJets << " jets" << std::endl;
@@ -351,12 +354,13 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 				else if ( m_includ_nu3nu3 && bosonDecayMode == 13 ) askedDecayMode = true;
 				else if ( m_includ_gammagamma && bosonDecayMode == 14 ) askedDecayMode = true;
 				else  askedDecayMode = false;
-				setReturnValue( "ZHDecayMode" , askedDecayMode );
+				//setReturnValue( "ZHDecayMode" , askedDecayMode );
 			}
 			else
 			{
-				setReturnValue( "ZHDecayMode" , false );
+				askedDecayMode = false;
 			}
+			setReturnValue( "ZHDecayMode" , askedDecayMode );
 		}
 		if ( m_fillRootTree )
 		{
@@ -365,6 +369,12 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 			h_ZLeptonicDecayMode->Fill( leptonicDecayMode );
 			n_ZDecays += 1.0;
 		}
+		streamlog_out(MESSAGE) << "	Leptonic Decay Mode:		" << leptonicDecayMode << std::endl;
+		streamlog_out(MESSAGE) << "	Other (Boson) Decay Mode:	" << bosonDecayMode << std::endl;
+		streamlog_out(MESSAGE) << "	Event selected by number of IsoLeptons:		" << ( trueNIsoLeps ? "TRUE" : "FALSE" ) << std::endl;
+		streamlog_out(MESSAGE) << "	Event selected by number of Jets:		" << ( trueNJets ? "TRUE" : "FALSE" ) << std::endl;
+		streamlog_out(MESSAGE) << "	Event selected by Leptonic Decay Mode:		" << ( askedLeptonicDecayMode ? "TRUE" : "FALSE" ) << std::endl;
+		streamlog_out(MESSAGE) << "	Event selected by Other (Boson) Decay Mode:	" << ( askedDecayMode ? "TRUE" : "FALSE" ) << std::endl;
 		m_leptonicDecayMode = leptonicDecayMode;
 		m_bosonDecayMode = bosonDecayMode;
 	}
@@ -372,7 +382,7 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
         {
         	streamlog_out(MESSAGE) << "	Input collection not found in event " << m_nEvt << std::endl;
         }
-	m_pTTree->Fill();
+	if ( m_fillRootTree ) m_pTTree->Fill();
 
 }
 
@@ -472,9 +482,9 @@ void ZHEvents::end()
 	{
 		m_pTFile->cd();
 		m_pTTree->Write();
-		h_ZHDecayMode->Scale( 100.0 / n_ZHDecays );
+		//h_ZHDecayMode->Scale( 100.0 / n_ZHDecays );
 		h_ZHDecayMode->Write();
-		h_ZLeptonicDecayMode->Scale( 100.0 / n_ZDecays );
+		//h_ZLeptonicDecayMode->Scale( 100.0 / n_ZDecays );
 		h_ZLeptonicDecayMode->Write();
 		m_pTFile->Close();
 		delete m_pTFile;
