@@ -17,6 +17,7 @@
 #include "TFile.h"
 #include "TH1I.h"
 #include "TTree.h"
+#include "TLorentzVector.h"
 
 class TFile;
 class TH1F;
@@ -88,6 +89,7 @@ private:
 	int					m_nIsoLeps = 0;
 	int					m_leptonicDecayMode;
 	int					m_bosonDecayMode;
+	float					m_isoLepInvMassCut;
 
 	double					PDGCodes[ 14 ]{ 24 , 5 , 4 , 3 , 2 , 1 , 21 , 11 , 13 , 15 , 12 , 14 , 16 , 22 };
 	double					leptonicPDGCodes[ 3 ]{ 11 , 13 , 15 };

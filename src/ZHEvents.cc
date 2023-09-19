@@ -13,6 +13,7 @@ ZHEvents::ZHEvents():
 	m_nEvtSum(0),
 	m_leptonicDecayMode(0),
 	m_bosonDecayMode(0),
+	m_isoLepInvMassCut(0.0),
 	n_ZHDecays(0.0),
 	n_ZDecays(0.0)
 {
@@ -171,6 +172,12 @@ ZHEvents::ZHEvents():
 					int(0)
 				);
 
+	registerProcessorParameter(	"isoLepInvMassCut",
+					"Cut on Invariant mass of Isolated Leptons to accept events with diLeptonInvMass >= diLeptonInvMassCut",
+					m_isoLepInvMassCut,
+					float(0.0)
+				);
+
 	registerProcessorParameter(	"cheatDecayMode",
 					"Cheat decay mode of boson fromMCTruth or use flavour-likeness / PFOType",
 					m_cheatDecayMode,
@@ -253,6 +260,7 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 	this->Clear();
 	bool trueNJets = false;
 	bool trueNIsoLeps = false;
+	bool IsoLepInvMass = false;
 	bool askedDecayMode = false;
 	bool askedLeptonicDecayMode = false;
 	const EVENT::LCCollection *MCParticleCollection{};
@@ -294,6 +302,22 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 			streamlog_out( DEBUG3 ) << "	Number of isolated leptons in the event matches the asked number of isolated leptons, --------EVENT ACCEPTED--------" << std::endl;
 		}
 		setReturnValue( "trueNIsoLeps" , trueNIsoLeps );
+
+		TLorentzVector diLeptonInvMass( 0.0 , 0.0 , 0.0 , 0.0 );
+		for ( int i_lep = 0 ; i_lep < nIsoLeps ; ++i_lep )
+		{
+			ReconstructedParticle* lepton = dynamic_cast<ReconstructedParticle*>( IsoleptonCollection->getElementAt( i_lep ) );
+			diLeptonInvMass += TLorentzVector( lepton->getMomentum()[ 0 ] , lepton->getMomentum()[ 1 ] , lepton->getMomentum()[ 2 ] , lepton->getEnergy() );
+		}
+		if ( diLeptonInvMass.M() >= m_isoLepInvMassCut )
+		{
+			IsoLepInvMass = true;
+		}
+		else
+		{
+			IsoLepInvMass = false;
+		}
+		setReturnValue( "isoLepInvMass" , IsoLepInvMass );
 
 		int leptonicDecayMode = 0;
 		int bosonDecayMode = 0;
