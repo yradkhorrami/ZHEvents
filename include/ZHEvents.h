@@ -56,6 +56,8 @@ private:
 	std::string				m_mcParticleCollection{};
 	std::string				m_inputJetCollection{};
 	std::string				m_inputIsoLepCollection{};
+	std::string				m_inputTrueQuarkCollection{};
+	std::string				m_inputTrueIsoLepCollection{};
 	std::string				m_rootFile{};
 
 	int					m_nRun;
@@ -87,9 +89,16 @@ private:
 	bool					m_includZe3e3 = true;
 	int					m_nJets = 0;
 	int					m_nIsoLeps = 0;
+	int					m_nRecoIsoLeptons;
+	int					m_nRecoJets;
+	int					m_nTrueIsoLeptons;
+	int					m_nTrueQuarks;
 	int					m_leptonicDecayMode;
 	int					m_bosonDecayMode;
-	float					m_isoLepInvMassCut;
+	float					m_diLeptonInvMass;
+	float					m_diQuarkInvMass;
+	float					m_isoLepInvMassCutMin;
+	float					m_isoLepInvMassCutMax;
 
 	double					PDGCodes[ 14 ]{ 24 , 5 , 4 , 3 , 2 , 1 , 21 , 11 , 13 , 15 , 12 , 14 , 16 , 22 };
 	double					leptonicPDGCodes[ 3 ]{ 11 , 13 , 15 };
