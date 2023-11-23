@@ -95,7 +95,8 @@ private:
 	int					m_nTrueQuarks;
 	int					m_leptonicDecayMode;
 	int					m_bosonDecayMode;
-	float					m_diLeptonInvMass;
+	float					m_diLeptonTrueInvMass;
+	float					m_diLeptonRecoInvMass;
 	float					m_diQuarkInvMass;
 	float					m_isoLepInvMassCutMin;
 	float					m_isoLepInvMassCutMax;

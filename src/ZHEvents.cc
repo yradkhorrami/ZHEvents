@@ -17,7 +17,8 @@ ZHEvents::ZHEvents():
 	m_nTrueQuarks(0),
 	m_leptonicDecayMode(0),
 	m_bosonDecayMode(0),
-	m_diLeptonInvMass(0.0),
+	m_diLeptonTrueInvMass(0.0),
+	m_diLeptonRecoInvMass(0.0),
 	m_diQuarkInvMass(0.0),
 	m_isoLepInvMassCutMin(0.0),
 	m_isoLepInvMassCutMax(0.0),
@@ -241,7 +242,8 @@ void ZHEvents::init()
 		m_pTTree->Branch("nRecoJets", &m_nRecoJets , "nRecoJets/I" );
 		m_pTTree->Branch("leptonicDecayMode", &m_leptonicDecayMode , "leptonicDecayMode/I" );
 		m_pTTree->Branch("bosonDecayMode", &m_bosonDecayMode , "bosonDecayMode/I" );
-		m_pTTree->Branch("diLeptonInvMass", &m_diLeptonInvMass , "diLeptonInvMass/F" );
+		m_pTTree->Branch("diLeptonTrueInvMass", &m_diLeptonTrueInvMass , "diLeptonTrueInvMass/F" );
+		m_pTTree->Branch("diLeptonRecoInvMass", &m_diLeptonRecoInvMass , "diLeptonRecoInvMass/F" );
 		m_pTTree->Branch("diQuarkInvMass", &m_diQuarkInvMass , "diQuarkInvMass/F" );
 		h_ZHDecayMode = new TH1F( "ZHDecayMode" , "; Decay Mode" , 15 , -0.5 , 14.5 ); n_ZHDecays = 0.0;
 		h_ZHDecayMode->GetXaxis()->SetBinLabel(1,"other");
@@ -275,7 +277,8 @@ void ZHEvents::Clear()
 	m_nRecoJets = 0;
 	m_leptonicDecayMode = 0;
 	m_bosonDecayMode = 0;
-	m_diLeptonInvMass = 0.0;
+	m_diLeptonTrueInvMass = 0.0;
+	m_diLeptonRecoInvMass = 0.0;
 	m_diQuarkInvMass = 0.0;
 }
 
@@ -299,7 +302,9 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 	this->Clear();
 	bool trueNJets = false;
 	bool trueNIsoLeps = false;
-	bool IsoLepInvMass = false;
+	bool typeIsoLeps = false;
+	bool trueIsoLepInvMass = false;
+	bool recoIsoLepInvMass = false;
 	bool askedDecayMode = false;
 	bool askedLeptonicDecayMode = false;
 	const EVENT::LCCollection *MCParticleCollection{};
@@ -346,25 +351,31 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 			trueNIsoLeps = true;
 			streamlog_out( DEBUG3 ) << "	Number of isolated leptons in the event matches the asked number of isolated leptons, --------EVENT ACCEPTED--------" << std::endl;
 		}
+		int isoLepType = 0;
+		TLorentzVector recoDiLepton4Momentum( 0.0 , 0.0 , 0.0 , 0.0 );
+		for ( int i_lep = 0 ; i_lep < m_nRecoIsoLeptons ; ++i_lep )
+		{
+			ReconstructedParticle *lepton = dynamic_cast<ReconstructedParticle*>( IsoleptonCollection->getElementAt( i_lep ) );
+			recoDiLepton4Momentum += TLorentzVector( lepton->getMomentum()[ 0 ] , lepton->getMomentum()[ 1 ] , lepton->getMomentum()[ 2 ] , lepton->getEnergy() );
+			isoLepType += lepton->getType();
+		}
+		m_diLeptonRecoInvMass = recoDiLepton4Momentum.M();
+		recoIsoLepInvMass = ( recoDiLepton4Momentum.M() >= m_isoLepInvMassCutMin && recoDiLepton4Momentum.M() <= m_isoLepInvMassCutMax ? true : false );
+		typeIsoLeps = ( isoLepType == 0 ? true : false );
+		trueNIsoLeps = trueNIsoLeps && typeIsoLeps;
 		setReturnValue( "trueNIsoLeps" , trueNIsoLeps );
+		setReturnValue( "recoIsoLepInvMass" , recoIsoLepInvMass );
 
 		m_nTrueIsoLeptons = TrueIsoleptonCollection->getNumberOfElements();
-		TLorentzVector diLepton4Momentum( 0.0 , 0.0 , 0.0 , 0.0 );
+		TLorentzVector trueDiLepton4Momentum( 0.0 , 0.0 , 0.0 , 0.0 );
 		for ( int i_lep = 0 ; i_lep < m_nTrueIsoLeptons ; ++i_lep )
 		{
 			MCParticle* lepton = dynamic_cast<MCParticle*>( TrueIsoleptonCollection->getElementAt( i_lep ) );
-			diLepton4Momentum += TLorentzVector( lepton->getMomentum()[ 0 ] , lepton->getMomentum()[ 1 ] , lepton->getMomentum()[ 2 ] , lepton->getEnergy() );
+			trueDiLepton4Momentum += TLorentzVector( lepton->getMomentum()[ 0 ] , lepton->getMomentum()[ 1 ] , lepton->getMomentum()[ 2 ] , lepton->getEnergy() );
 		}
-		if ( m_nTrueIsoLeptons == m_nIsoLeps ) m_diLeptonInvMass = diLepton4Momentum.M();
-		if ( diLepton4Momentum.M() >= m_isoLepInvMassCutMin && diLepton4Momentum.M() <= m_isoLepInvMassCutMax )
-		{
-			IsoLepInvMass = true;
-		}
-		else
-		{
-			IsoLepInvMass = false;
-		}
-		setReturnValue( "isoLepInvMass" , IsoLepInvMass );
+		if ( m_nTrueIsoLeptons == m_nIsoLeps ) m_diLeptonTrueInvMass = trueDiLepton4Momentum.M();
+		trueIsoLepInvMass = ( trueDiLepton4Momentum.M() >= m_isoLepInvMassCutMin && trueDiLepton4Momentum.M() <= m_isoLepInvMassCutMax ? true : false );
+		setReturnValue( "trueIsoLepInvMass" , trueIsoLepInvMass );
 
 		m_nTrueQuarks = TrueQuarkCollection->getNumberOfElements();
 		TLorentzVector diQuark4Momentum( 0.0 , 0.0 , 0.0 , 0.0 );
@@ -468,7 +479,7 @@ void ZHEvents::processEvent( EVENT::LCEvent *pLCEvent )
 			h_ZLeptonicDecayMode->Fill( leptonicDecayMode );
 			n_ZDecays += 1.0;
 		}
-		streamlog_out(MESSAGE) << "	Leptonic Decay Mode:		" << leptonicDecayMode << " (Di-Lepton Invariant Mass = " << m_diLeptonInvMass << " GeV)" << std::endl;
+		streamlog_out(MESSAGE) << "	Leptonic Decay Mode:		" << leptonicDecayMode << " (Di-Lepton True Invariant Mass = " << m_diLeptonTrueInvMass << " GeV , Reco Invariant Mass = " << m_diLeptonRecoInvMass << " GeV)" << std::endl;
 		streamlog_out(MESSAGE) << "	Other (Boson) Decay Mode:	" << bosonDecayMode << " (Di-Quark Invariant Mass = " << m_diQuarkInvMass << " GeV)" << std::endl;
 		streamlog_out(MESSAGE) << "	Event selected by number of IsoLeptons:		" << ( trueNIsoLeps ? "TRUE" : "FALSE" ) << std::endl;
 		streamlog_out(MESSAGE) << "	Event selected by number of Jets:		" << ( trueNJets ? "TRUE" : "FALSE" ) << std::endl;
